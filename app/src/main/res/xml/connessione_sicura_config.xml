@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<connessione_sicura_config xmlns:android="http://schemas.android.com/apk/res/android">
+    <domain-config>
+        <domain includeSubdomains="true">192.168.178.22</domain>
+        <trust-anchor>
+            <ceritificates src="@raw/public_cert"></ceritificates>
+        </trust-anchor>
+        <pin-set>
+            <pin digest="SHA-256">89df9ae3ec2a03c5bc82135b727fb9d7d424940a6a71b073060f83d7c06d6f23</pin>
+        </pin-set>
+    </domain-config>
+</connessione_sicura_config>

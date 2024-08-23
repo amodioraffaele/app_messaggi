@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:showIn="navigation_view">
+    <group
+        android:checkableBehavior="single">
+        <item
+            android:id="@+id/indietro"
+            android:icon="@drawable/ic_casa"
+            android:title="Indietro"
+            />
+    <item
+        android:id="@+id/cambiafoto"
+        android:icon="@drawable/ic_foto"
+        android:title="Aggiorna foto" />
+        >
+    <item
+        android:id="@+id/logout"
+        android:title="Logout"
+        android:icon="@drawable/ic_logout"
+    />
+    </group>
+</menu>
