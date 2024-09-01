@@ -40,144 +40,12 @@ fun String.hash(salt: String): String{
     return hash
 }
 
-
-fun Certificati(activity: Activity): KeyStore {
-    val keystore = KeyStore.getInstance(KeyStore.getDefaultType())
-    keystore.load(null,null)
-    if (!keystore.isCertificateEntry("certificato")) {
-        val tipo = CertificateFactory.getInstance("X.509")
-        val certificato = activity.resources.openRawResource(R.raw.public_cert)
-        var certificato_gen = tipo.generateCertificate(certificato)
-        keystore.setCertificateEntry("certificato", certificato_gen)
-    } else{
-        keystore.getCertificate("certificato")
-    }
-
-    return keystore
-}
-fun generateKeyPair(): KeyPair {
-    val keyGen = KeyPairGenerator.getInstance("RSA")
-    keyGen.initialize(2048)  // 2048 bits is recommended for RSA
-    return keyGen.genKeyPair()
-}
-
-fun GeneraCertificato(): Pair<X509Certificate, KeyPair>{
-    Security.addProvider(BouncyCastleProvider())
-    val chiavi = generateKeyPair()
-    val startDate = Date()
-    val endDate = Date(startDate.time + 365L * 24 * 60 * 60 * 1000) // 1 year validity
-    val serialNumber = BigInteger.valueOf(System.currentTimeMillis())
-
-    val issuer = X500Name("CN=My Cert, O=My Company, C=US")
-    val subject = X500Name("E=amodioraffaele.merone001@studenti.uniparthenope.it,CN=Server-app-mess,L=Somma,ST=Campania,C=IT")
-
-    // Generate the certificate
-    val certBuilder = JcaX509v3CertificateBuilder(
-        issuer,
-        serialNumber,
-        startDate,
-        endDate,
-        subject,
-        chiavi.public
-    )
-
-    val contentSigner = JcaContentSignerBuilder("SHA256WithRSAEncryption")
-        .build(chiavi.private)
-
-    val holder = certBuilder.build(contentSigner)
-    return Pair(JcaX509CertificateConverter()
-        .setProvider(BouncyCastleProvider())
-        .getCertificate(holder), chiavi)
-}
-
-
-fun createSSLSocketFactory(activity: Activity): SSLSocketFactory {
-    val keyStore = KeyStore.getInstance(KeyStore.getDefaultType())
-    FileInputStream(File(activity.filesDir,"cert_e_privatekey.jks")).use { fis ->
-        keyStore.load(fis, "password".toCharArray())
-    }
-    keyStore.getKey("cert","password".toCharArray() )
-    val keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm())
-    keyManagerFactory.init(keyStore, "password".toCharArray())
-
-    val trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
-    trustManagerFactory.init(keyStore)
-
-    val sslContext = SSLContext.getInstance("TLS")
-    sslContext.init(keyManagerFactory.keyManagers, trustManagerFactory.trustManagers, null)
-
-    return sslContext.socketFactory
-}
-fun createKeyStore(
-    privateKey: PrivateKey,
-    cert: X509Certificate,
-    alias: String,
-    password: String,
-    jksFileName: String,
-    activity: Activity
-) {
-    val ks = KeyStore.getInstance(KeyStore.getDefaultType())
-    val password = "password".toCharArray()
-    ks.load(null, password)
-// Store away the keystore.
-    val fos = FileOutputStream(File(activity.filesDir, jksFileName))
-    ks.store(fos, password)
-    fos.close()
-    ks.load(null, null)
-    ks.setKeyEntry(alias, privateKey, password, arrayOf(cert))
-    FileOutputStream(File(activity.filesDir,jksFileName)).use { fos ->
-        ks.store(fos, password)
-    }
-}
-@RequiresApi(Build.VERSION_CODES.O)
-suspend fun Reg_E_Login(operazione: String, Prefisso: String, Numero: String, Password: String, activity: Activity): Any = withContext(
-    Dispatchers.IO) {
-    var risultato = ""
-    try {
-            var connessione = SSLContext.getInstance("TLSv1.2")
-            val keystore = Certificati(activity)
-            /*val (certificato, chiavi) = GeneraCertificato()
-            println("certificato:")
-            println(certificato)
-            createKeyStore(chiavi.private, certificato, "cert", "password", "cert_e_privatekey.jks", activity)
-            val keyStore = KeyStore.getInstance(KeyStore.getDefaultType())
-            val keyManagerFactory = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm())
-            keyManagerFactory.init(keyStore, null)
-        // Set up the TrustManager for verifying server certificates
-            val trustManagerFactory = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
-            trustManagerFactory.init(keyStore)
-            //connessione.init(keyManagerFactory.keyManagers, trustManagerFactory.trustManagers, SecureRandom())
-*/
-            val trustmanager = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
-            trustmanager.init(keystore)
-            connessione.init(null,trustmanager.trustManagers ,null)
-             var socket = connessione.socketFactory
-             var soc = socket.createSocket("192.168.178.22", 21402)
-            //var socket = createSSLSocketFactory(activity)
-            val input = BufferedReader(InputStreamReader(soc.getInputStream()))
-            val output = PrintWriter(soc.getOutputStream(), true)
-            val dati = "$operazione $Prefisso $Numero $Password"
-            val (cifrato, chiave) = cifraAES(dati)
-            val ChiaveCifrata = RSA(chiave)
-            output.println("$cifrato chiave: $ChiaveCifrata")
-            val TestoRicevuto = input.readLine()
-            //risultato = decifraAES(TestoRicevuto, chiave)
-            risultato = TestoRicevuto
-            soc.close()
-    } catch (e : Exception){
-            risultato = "errore"
-            println("Errore: $e")
-    }
-    return@withContext risultato
-    }
-
-
+@OptIn(ExperimentalEncodingApi::class)
 fun decifraAES(Cifrato: String, chiave: String): String {
-        val cifrario = Cipher.getInstance("AES_128/ECB/PKCS5Padding")
+        val cifrario = Cipher.getInstance("AES/ECB/PKCS5Padding")
         cifrario.init(Cipher.DECRYPT_MODE,SecretKeySpec(chiave.toByteArray(), "AES"))
-        val testo = cifrario.doFinal(Cifrato.toByteArray())
-        print(testo.decodeToString())
-        return testo.toString()
+        val testo = cifrario.doFinal(kotlin.io.encoding.Base64.decode(Cifrato, DEFAULT))
+        return testo.decodeToString()
 }
 
 
@@ -185,14 +53,14 @@ fun decifraAES(Cifrato: String, chiave: String): String {
 fun RSA(Plain: String): String {
     val cifrario: Cipher = Cipher.getInstance("RSA/None/PKCS1Padding")
     val ChiaveEsterna = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAnGcaITCBd58dvDzJa2Hwr0QAIEEJpiJoaa+HPX82MnfYOu/fRTJySojAcI5wcL10HT9Du5JV3dXSYxwjO3QPV8lTq/eJy66lZHhUOtcVzhcBZ1s81LH+A+nmH6l2CvyzXK8THuB7m7dMz8ObDySHQc24/PdFTpkHGIyweSHi9ow1R71czkjRtgsFMbvVVwcetH/3RPKmbbO65wS6eTXcN1B2keC9x0v48oDm9p6+bHhPT/09FFNykZKKb+n38cMnBV2S8/daPBpzuf2q5hNO2EexA9h/wmW2pCWxFq13TXvUlq6HU6TpnV9qzY1b0vUpSIsXq3d+dfCYfV2R+/qbqwIDAQAB"
-    val chiavees = android.util.Base64.decode(Plain, DEFAULT)
+    val chiavees = android.util.Base64.decode(ChiaveEsterna, DEFAULT)
     val contenitore = KeyFactory.getInstance("RSA").generatePublic(X509EncodedKeySpec(chiavees)) as RSAPublicKey
     val modulo = contenitore.modulus.toString(16)
     val esponente = contenitore.publicExponent.toString(16)
     var ChiavePubblicaServer = ChiavePubRSA(modulo, esponente)
     cifrario.init(Cipher.ENCRYPT_MODE, ChiavePubblicaServer)
     val cifrato =  cifrario.doFinal(Plain.toByteArray())
-    return Base64.getEncoder().encodeToString(cifrato)
+    return android.util.Base64.encodeToString(cifrato, DEFAULT)
 }
 
 @OptIn(ExperimentalEncodingApi::class)
@@ -207,8 +75,8 @@ fun cifraAES(chiaro: String): Pair<String?, String> {
     val key = SecretKeySpec(keyinByte, "AES")
     val cifrario = Cipher.getInstance("AES/ECB/PKCS5Padding")
     cifrario.init(Cipher.ENCRYPT_MODE, key)
-    val cipherText = cifrario.doFinal(plainText)
-    val d = android.util.Base64.encodeToString(cipherText, DEFAULT)
+    val cifrato = cifrario.doFinal(plainText)
+    val d = android.util.Base64.encodeToString(cifrato, DEFAULT)
     return Pair(d, keyStringa)
 }
 
@@ -275,7 +143,7 @@ fun cifraRSA(testo: String): String {
     )
     cifrario.init(Cipher.ENCRYPT_MODE, chiavi.public, spec)
     val cifrato = cifrario.doFinal(testo.toByteArray())
-    return Base64.getEncoder().encodeToString(cifrato)
+    return android.util.Base64.encodeToString(cifrato, DEFAULT)
 }
 
 
@@ -285,7 +153,7 @@ fun decifraRSA(cifrato: String): String {
     val spec = OAEPParameterSpec("SHA-256", "MGF1", MGF1ParameterSpec.SHA1, PSource.PSpecified.DEFAULT)
     val cifrario = Cipher.getInstance("RSA/ECB/OAEPwithSHA-256andMGF1Padding")
     cifrario.init(Cipher.DECRYPT_MODE, chiavi.private, spec)
-    return String(cifrario.doFinal(Base64.getDecoder().decode(cifrato)))
+    return String(cifrario.doFinal(android.util.Base64.decode(cifrato, DEFAULT)))
 }
 
 
@@ -297,7 +165,7 @@ fun decifraRSA(cifrato: String): String {
 fun cifraMessaggioAES(chiaro: String, chiave: String): String? {
     println("chiave: $chiave")
     val plainText = chiaro.toByteArray(Charsets.UTF_8)
-    val cifrario = Cipher.getInstance("AES_256/CBC/PKCS5Padding")
+    val cifrario = Cipher.getInstance("AES/CBC/PKCS5Padding")
     val chiave_ci = SecretKeySpec(chiave.toByteArray(), "AES")
     cifrario.init(Cipher.ENCRYPT_MODE, chiave_ci)
     val cifrato = cifrario.iv + cifrario.doFinal(plainText)
@@ -308,7 +176,7 @@ fun cifraMessaggioAES(chiaro: String, chiave: String): String? {
 fun decifraMessaggioAES(cifrato: ByteArray, chiave: String?): String? {
     val iv = cifrato.copyOfRange(0,16)
     val testoCifrato = cifrato.copyOfRange(16, cifrato.size)
-    val cifrario = Cipher.getInstance("AES_256/CBC/PKCS5Padding")
+    val cifrario = Cipher.getInstance("AES/CBC/PKCS5Padding")
     cifrario.init(Cipher.DECRYPT_MODE,SecretKeySpec(chiave!!.toByteArray(), "AES"), IvParameterSpec(iv))
     val testo = cifrario.doFinal(testoCifrato)
     return testo.decodeToString()

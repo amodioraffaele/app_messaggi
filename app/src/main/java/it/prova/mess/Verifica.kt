@@ -69,17 +69,18 @@ class Verifica : AppCompatActivity() {
 
     private fun countdown() {
         timer = 60
-        val count = findViewById<TextView>(R.id.Countdown)
-        object :CountDownTimer(60*1000,1000){
+        val testo_countdown = findViewById<TextView>(R.id.Countdown)
+        val countdown = object :CountDownTimer(60*1000,1000){
             override fun onTick(millisecondi_rimanenti: Long){
-                count.setText("${millisecondi_rimanenti/1000}")
+                testo_countdown.setText("${millisecondi_rimanenti/1000}")
             }
 
             override fun onFinish() {
-                count.setText("0")
+                testo_countdown.setText("0")
                 timer = 0
             }
         }
+        countdown.start()
     }
 
     private fun signInWithPhoneAuthCredential(credential: PhoneAuthCredential) {

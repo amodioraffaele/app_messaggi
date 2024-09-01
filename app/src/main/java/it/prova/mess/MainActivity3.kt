@@ -148,7 +148,7 @@ class MainActivity3 : AppCompatActivity() {
         var chiavePref = sharedpref.getString("$id$id_ricevente", null)
         if (chiavePref == null){
             runBlocking {
-                chiave = Ottienichiave(id, id_ricevente).toString()
+                chiave = API_SERVER().chiave(id, id_ricevente, this@MainActivity3)
             }
             if(chiave != "errore") {
                 val chiavecifrata = cifraRSA(chiave)
@@ -162,43 +162,18 @@ class MainActivity3 : AppCompatActivity() {
         return chiave
     }
 
-    @RequiresApi(Build.VERSION_CODES.O)
-    private suspend fun Ottienichiave(id: String, id_ricevente: String) : Any = withContext(
-    Dispatchers.IO){
-        var risultato = ""
-        try {
-            var connessione = SSLContext.getInstance("TLSv1.2")
-            val keystore = Certificati(this@MainActivity3)
-            val trustmanager = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
-            trustmanager.init(keystore)
-            connessione.init(null,trustmanager.trustManagers ,null)
-            var socket = connessione.socketFactory
-            var soc = socket.createSocket("192.168.178.22", 21402)
-            val input = BufferedReader(InputStreamReader(soc.getInputStream()))
-            val output = PrintWriter(soc.getOutputStream(), true)
-            val dati = "chiave: $id $id_ricevente"
-            val (cifrato, chiave) = cifraAES(dati)
-            val ChiaveCifrata = RSA(chiave)
-            output.println("$cifrato chiave: $ChiaveCifrata")
-            while(input.ready()){
-                delay(1)
-            }
-            risultato = input.readLine()
-            //risultato = decifraAES(TestoRicevuto, chiave)
-            soc.close()
-        } catch (e : Exception){
-            risultato = "errore"
-        }
 
-        return@withContext risultato
-    }
     @RequiresApi(Build.VERSION_CODES.O)
     fun salvachat(lista: ArrayList<Messaggio>, id: String, db: SQLiteDatabase){
         val gson = Gson()
         val json = gson.toJson(lista)
         val jsonCifrato = cifraMessaggioAES(json, chiave)
         dbHelper.inserisci(db,jsonCifrato!!,id, intent.getStringExtra("numero").toString())
-        messaggi_salvati.addAll(messaggi)
+        if (this::messaggi_salvati.isInitialized) {
+            messaggi_salvati.addAll(messaggi)
+        } else{
+            messaggi_salvati = messaggi
+        }
     }
 
     @RequiresApi(Build.VERSION_CODES.O)

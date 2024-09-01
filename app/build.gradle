@@ -54,12 +54,16 @@ dependencies {
     implementation ("io.socket:socket.io-client:2.0.0"){
         exclude group: "org.json", "module": "json"
     }
+    implementation("com.squareup.okhttp3:okhttp:4.0.0")
+    implementation "com.squareup.retrofit2:retrofit:2.9.0"
+    implementation "com.squareup.retrofit2:converter-moshi:2.9.0"
+    implementation "com.android.volley:volley-cronet:1.2.1"
+    implementation "com.google.code.gson:gson:2.8.9"
     implementation "com.squareup.picasso:picasso:2.8"
     implementation 'org.bouncycastle:bcprov-jdk15on:1.70'
     implementation 'org.bouncycastle:bcpkix-jdk15on:1.70'
     implementation 'com.cloudinary:cloudinary-android:2.8.0'
     implementation 'com.intuit.ssp:ssp-android:1.1.1'
-    implementation 'com.google.code.gson:gson:2.8.5'
     implementation 'androidx.security:security-crypto:1.1.0-alpha03'
     implementation 'net.zetetic:sqlcipher-android:4.6.0@aar'
     implementation 'androidx.sqlite:sqlite:2.2.0'

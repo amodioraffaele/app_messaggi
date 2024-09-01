@@ -36,6 +36,7 @@ class Registrazione : AppCompatActivity() {
         val passwordView = findViewById<EditText>(R.id.password)
         val RipetiView = findViewById<EditText>(R.id.password1)
         var registrazione = findViewById<Button>(R.id.Registrati)
+        val contatta = API_SERVER()
         registrazione.setOnClickListener(){
             val salt = BCrypt.gensalt()
             val numero = numeroView.text.toString()
@@ -47,13 +48,11 @@ class Registrazione : AppCompatActivity() {
                         password = password.hash(salt)
                         var risultato = ""
                         runBlocking {
-                            risultato = Reg_E_Login(
-                                "Reg:",
+                            risultato = contatta.registrazione(
                                 prefissoScelto.toString(),
                                 numero,
                                 password,
-                                this@Registrazione
-                            ).toString()
+                            )
                         }
                         numeroView.setText("")
                         passwordView.setText("")
@@ -62,6 +61,9 @@ class Registrazione : AppCompatActivity() {
                             intent.putExtra("numero", numero)
                             intent.putExtra("prefisso", PrefissoView.selectedItemPosition)
                             startActivity(intent)
+                        } else{
+                            val testo = findViewById<TextView>(R.id.textView3)
+                            testo.setText(risultato)
                         }
                     } else {
                         val testo = findViewById<TextView>(R.id.textView3)

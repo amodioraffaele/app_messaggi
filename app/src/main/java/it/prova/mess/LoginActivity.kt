@@ -36,15 +36,14 @@ class LoginActivity : AppCompatActivity() {
             numeroView.setText(n)
             PrefissoView.setSelection(intent.getIntExtra("prefisso", 1))
         }
+        val server = API_SERVER()
         accedi.setOnClickListener() {
             val numero = numeroView.text.toString()
             val password = passwordView.text.toString()
             passwordView.setText("")
             var prefisso = PrefissoView.selectedItem.toString()
-            var risultato = ""
-            runBlocking {
-                risultato = Reg_E_Login("Login:", prefisso, numero, password, this@LoginActivity).toString()
-        }
+            val risultato = server.login(prefisso, numero, password, this@LoginActivity)
+
             Controllo(prefisso,numero, risultato)
 
         }

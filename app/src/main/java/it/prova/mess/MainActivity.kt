@@ -59,6 +59,7 @@ class MainActivity : AppCompatActivity(),NavigationView.OnNavigationItemSelected
     private lateinit var database_ref: DatabaseReference
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
+        val server = API_SERVER()
         setContentView(R.layout.activity_main)
         runBlocking {
             var auth = FirebaseAuth.getInstance()
@@ -74,22 +75,19 @@ class MainActivity : AppCompatActivity(),NavigationView.OnNavigationItemSelected
         database_ref = database.getReferenceFromUrl("https://messaggi-f4a2d-default-rtdb.europe-west1.firebasedatabase.app/")
         val numero = intent.getStringExtra("numero")
         val prefisso = intent.getStringExtra("prefisso")
-        if (salvati.getString("io", null) == null) {
+        if (salvati.getString("io", null) == null && FirebaseAuth.getInstance().currentUser?.uid != null) {
             val id = FirebaseAuth.getInstance().currentUser?.uid.toString()
             dbHelper.inserisci(db," ",id,numero.toString())
             salvati.edit().putString("io", numero).apply()
             runBlocking() {
-                Reg_E_Login("Reg_id:", prefisso.toString(),numero.toString(),id,this@MainActivity)
+                server.reg_id(prefisso.toString(),numero.toString(),id)
             database_ref.child("chats").child(FirebaseAuth.getInstance().currentUser!!.uid).addListenerForSingleValueEvent(object : ValueEventListener{
                 override fun onDataChange(snapshot: DataSnapshot) {
                     for (nuovo_ID in snapshot.children) {
                         println(nuovo_ID)
                         if (nuovo_ID.key != "foto" && nuovo_ID.key != FirebaseAuth.getInstance().currentUser!!.uid) {
-                            var r: String
-                            runBlocking {
-                                r = cerca_server("Cerca_id:", nuovo_ID.key!!)
-                            }
-                            salvati.edit().putString(r, nuovo_ID.key!!).apply()
+                            var risultato = server.cerca_id(nuovo_ID.key!!)
+                            salvati.edit().putString(risultato, nuovo_ID.key!!).apply()
                         }
                     }
                 }
@@ -123,11 +121,8 @@ class MainActivity : AppCompatActivity(),NavigationView.OnNavigationItemSelected
             override fun onDataChange(snapshot: DataSnapshot) {
                 for (nuovo_ID in snapshot.children) {
                     if (nuovo_ID.key != "foto" && nuovo_ID.key != FirebaseAuth.getInstance().currentUser!!.uid) {
-                        var r: String
-                        runBlocking {
-                            r = cerca_server("Cerca_id:", nuovo_ID.key!!)
-                        }
-                        salvati.edit().putString(r, nuovo_ID.key!!)
+                        var risultato = server.cerca_id(nuovo_ID.key!!)
+                        salvati.edit().putString(risultato, nuovo_ID.key!!)
                     }
                 }
             }
@@ -146,9 +141,7 @@ class MainActivity : AppCompatActivity(),NavigationView.OnNavigationItemSelected
                 salvati.edit().clear().commit()
                 firebaseid = salvati.getString("$query","").toString()
                 if (firebaseid.isNullOrEmpty()) {
-                    runBlocking {
-                        firebaseid = Reg_E_Login("Cerca:","",Cerca.query.toString(),"",this@MainActivity) as String
-                    }
+                    firebaseid = server.cerca_numero(Cerca.query.toString())
                     if (firebaseid != "errore" && !firebaseid.isNullOrEmpty() && firebaseid != "Numero non trovato") {
                         with(salvati.edit()) {
                             putString("$query", firebaseid)
@@ -237,7 +230,6 @@ class MainActivity : AppCompatActivity(),NavigationView.OnNavigationItemSelected
         val tutti = salvati.all
         for (persona in tutti) {
             if (FirebaseAuth.getInstance().currentUser?.uid != null) {
-                if (!persona.key.startsWith(FirebaseAuth.getInstance().currentUser!!.uid)) {
                     var foto: String? = null
                     var id = " "
                     if (persona.key == "io") {
@@ -263,40 +255,10 @@ class MainActivity : AppCompatActivity(),NavigationView.OnNavigationItemSelected
                     listapersone.add(uno)
                 }
             }
-        }
         utentiview.notifyDataSetChanged()
     }
 
 
-   @RequiresApi(Build.VERSION_CODES.O)
-   private suspend fun cerca_server(operazione: String, numero: String) : String = withContext(
-        Dispatchers.IO) {
-        var risultato = ""
-        try {
-            var connessione = SSLContext.getInstance("TLS")
-            val keystore = Certificati(this@MainActivity)
-            val trustmanager = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm())
-            trustmanager.init(keystore)
-            connessione.init(null,trustmanager.trustManagers ,null)
-            var socket = connessione.socketFactory
-            var soc = socket.createSocket("192.168.178.22", 21402)
-            val input = BufferedReader(InputStreamReader(soc.getInputStream()))
-            val output = PrintWriter(soc.getOutputStream(), true)
-            val dati = "$operazione $numero"
-            val (cifrato, chiave) = cifraAES(dati)
-            val ChiaveCifrata = RSA(chiave)
-            output.println("$cifrato chiave: $ChiaveCifrata")
-            while(input.ready()){
-                delay(1)
-            }
-            risultato = input.readLine().toString()
-            soc.close()
-            //risultato = decifraAES(TestoRicevuto, chiave)
-        } catch (e: Exception){
-            risultato = "errore"
-        }
-        return@withContext risultato
-        }
 
     override fun onNavigationItemSelected(item: MenuItem): Boolean {
         when (item.itemId) {
