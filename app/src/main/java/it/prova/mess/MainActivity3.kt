@@ -8,6 +8,7 @@ import android.os.Build
 import android.os.Bundle
 import android.widget.ImageView
 import android.widget.TextView
+import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -150,12 +151,14 @@ class MainActivity3 : AppCompatActivity() {
             runBlocking {
                 chiave = API_SERVER().chiave(id, id_ricevente, this@MainActivity3)
             }
-            if(chiave != "errore") {
+            if(chiave != "Errore") {
                 val chiavecifrata = cifraRSA(chiave)
                 with(sharedpref.edit()) {
                     putString("$id$id_ricevente", chiavecifrata)
                     apply()
-                }}
+                }} else{
+                    Toast.makeText(this, "C'è stato un errore", Toast.LENGTH_LONG).show()
+            }
         } else{
             chiave = decifraRSA(chiavePref)
         }

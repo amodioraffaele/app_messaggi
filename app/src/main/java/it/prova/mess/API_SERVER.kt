@@ -29,8 +29,8 @@ class API_SERVER {
         val ChiaveCifrata = RSA(chiave)
         return Cifratura(cifrato!!,ChiaveCifrata,chiave)
     }
-    fun thread(tipo: String, cifrato: String, chiave: String, API: String? = null) : String{
-        val connessione = Connessione(tipo, cifrato, chiave, API)
+    fun thread(tipo: String, cifrato: String, chiave: String) : String{
+        val connessione = Connessione(tipo, cifrato, chiave)
         val thread = Thread(connessione)
         thread.start()
         thread.join()
@@ -64,7 +64,7 @@ class API_SERVER {
     fun registrazione(prefisso: String, numero: String, password: String): String {
         val cifratura = cifra("$prefisso $numero $password")
         val risposta_cifrata = thread("/registrazione", cifratura.cifrato!!, cifratura.ChiaveCifrata)
-        if (risposta_cifrata.startsWith("Errore")) {
+        if (risposta_cifrata.startsWith("Errore") || risposta_cifrata.isNullOrEmpty()) {
             return risposta_cifrata
         } else {
             val risposta = decifraAES(risposta_cifrata, cifratura.chiave)
@@ -106,13 +106,11 @@ class API_SERVER {
     }
 
     fun chiave(id1: String, id2 : String, activity: Activity): String{
-        val cifratura = cifra("$id1 $id2")
         val sharedPreferences = activity.getSharedPreferences("API_KEY", Context.MODE_PRIVATE)
         val chiave = sharedPreferences.getString("API_KEY", null)
-        println("chiave: $chiave")
         val chiave_dec = decifraRSA(chiave!!)
-        println("chiave_dec = $chiave_dec")
-        val risposta_cifrata = thread("/chiave", cifratura.cifrato!!, cifratura.ChiaveCifrata, chiave_dec)
+        val cifratura = cifra("$id1 $id2 $chiave_dec")
+        val risposta_cifrata = thread("/chiave", cifratura.cifrato!!, cifratura.ChiaveCifrata)
         if (risposta_cifrata.startsWith("Errore")) {
             return risposta_cifrata
         } else {
@@ -124,17 +122,15 @@ class API_SERVER {
 
     class Connessione : Runnable {
         @Volatile
-        private var url = "https://dea8-79-49-10-180.ngrok-free.app"
+        private var url = "https://299d-79-49-10-180.ngrok-free.app"
         var risposta = "errore"
         var cifrato : String? = null
         var chiave  : String? = null
         var tipo : String? = null
-        var API : String? = null
-        constructor(tipo: String,cifrato: String, chiave: String, API: String?){
+        constructor(tipo: String,cifrato: String, chiave: String){
             this.cifrato = cifrato
             this.tipo = tipo
             this.chiave = chiave
-            this.API = API
         }
         override fun run() {
             val client = OkHttpClient()
@@ -142,9 +138,6 @@ class API_SERVER {
             var json = JsonObject()
             json.addProperty("cifratoAES", cifrato)
             json.addProperty("ChiaveCifrata", chiave)
-            if (tipo == "/chiave"){
-                json.addProperty("API_KEY", API)
-            }
             val body = json.toString().toRequestBody("application/json; charset=utf-8".toMediaType())
             val request = Request.Builder()
                 .url(url_connessione)
@@ -160,7 +153,6 @@ class API_SERVER {
         }
 
         public fun Prendi(): String {
-            println("risposta: $risposta")
             return this.risposta
         }
 
