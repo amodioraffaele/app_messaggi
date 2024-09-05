@@ -66,7 +66,6 @@ class MainActivity3 : AppCompatActivity() {
         setContentView(R.layout.activity_main3)
         messaggi = ArrayList()
 
-
         id_ricevente = intent!!.getStringExtra("firebase-id")!!
         val chat = findViewById<RecyclerView>(R.id.messaggi)
         val id = FirebaseAuth.getInstance().currentUser?.uid.toString()
@@ -90,23 +89,20 @@ class MainActivity3 : AppCompatActivity() {
 
         dbHelper = database(this, PasswordDatabase(this))
         db = dbHelper.writableDatabase
-
-
+        chat.layoutManager = LinearLayoutManager(this)
+        chat.adapter = messaggioView
+        for (singolo in riprendichat(id_ricevente.toString(),db)) {
+            messaggi.add(singolo)
+        }
+        messaggioView.notifyDataSetChanged()
         val indietro = findViewById<ImageView>(R.id.indietro)
         indietro.setOnClickListener(){
             val intent = Intent(this, MainActivity::class.java)
             salvachat(messaggi, id_ricevente.toString(), db)
             startActivity(intent)
         }
-        chat.layoutManager = LinearLayoutManager(this)
-        chat.adapter = messaggioView
         myRef.child("chats").child(id).child(id_ricevente.toString()).child("messaggi").addValueEventListener(object : ValueEventListener{
             override fun onDataChange(dataSnapshot: DataSnapshot) {
-                if (messaggi.isNullOrEmpty()) {
-                    for (singolo in riprendichat(id_ricevente.toString(),db)) {
-                        messaggi.add(singolo)
-                    }
-                }
                     for (nuovo in dataSnapshot.children){
                         val mess = nuovo.getValue(Messaggio::class.java)
                         if (messaggi.isNullOrEmpty()){
@@ -145,22 +141,27 @@ class MainActivity3 : AppCompatActivity() {
 
     @RequiresApi(Build.VERSION_CODES.O)
     private fun Chiave(id: String, id_ricevente: String): String {
-        val sharedpref = this.getPreferences(Context.MODE_PRIVATE)
-        var chiavePref = sharedpref.getString("$id$id_ricevente", null)
-        if (chiavePref == null){
-            runBlocking {
-                chiave = API_SERVER().chiave(id, id_ricevente, this@MainActivity3)
-            }
-            if(chiave != "Errore") {
-                val chiavecifrata = cifraRSA(chiave)
-                with(sharedpref.edit()) {
-                    putString("$id$id_ricevente", chiavecifrata)
-                    apply()
-                }} else{
-                    Toast.makeText(this, "C'è stato un errore", Toast.LENGTH_LONG).show()
-            }
+        if (this::chiave.isInitialized) {
+            return chiave
         } else{
-            chiave = decifraRSA(chiavePref)
+            val sharedpref = this.getPreferences(Context.MODE_PRIVATE)
+            var chiavePref = sharedpref.getString("$id$id_ricevente", null)
+            if (chiavePref == null) {
+                runBlocking {
+                    chiave = API_SERVER().chiave(id, id_ricevente, this@MainActivity3)
+                }
+                if (chiave != "Errore") {
+                    val chiavecifrata = cifraRSA(chiave)
+                    with(sharedpref.edit()) {
+                        putString("$id$id_ricevente", chiavecifrata)
+                        apply()
+                    }
+                } else {
+                    Toast.makeText(this, "C'è stato un errore", Toast.LENGTH_LONG).show()
+                }
+            } else {
+                chiave = decifraRSA(chiavePref)
+            }
         }
         return chiave
     }

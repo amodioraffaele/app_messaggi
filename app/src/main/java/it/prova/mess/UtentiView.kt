@@ -39,13 +39,11 @@ class UtentiView(val context: Context, val entry: ArrayList<Persone>): RecyclerV
         if (!dati.foto.isNullOrEmpty()) {
             val storage = FirebaseStorage.getInstance()
             val storageRef = storage.reference
-            println("dati = $dati")
             if (dati.nome == "io"){
                 id = FirebaseAuth.getInstance().currentUser?.uid.toString()
             } else{
                 id = dati.id!!
             }
-            println("id: $id")
             val imma = storageRef.child("immagini").child(id)
             imma.getBytes(10 * 1024 * 1024).addOnSuccessListener {
                 val bitmap = BitmapFactory.decodeByteArray(it, 0, it.size)

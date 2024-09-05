@@ -68,35 +68,48 @@ class MainActivity : AppCompatActivity(),NavigationView.OnNavigationItemSelected
                 startActivity(myIntent)
             }
         }
-        dbHelper = database(this,"okokok")
+        dbHelper = database(this, PasswordDatabase(this))
         db = dbHelper.writableDatabase
         salvati = this.getPreferences(Context.MODE_PRIVATE)
         val database = Firebase.database
         database_ref = database.getReferenceFromUrl("https://messaggi-f4a2d-default-rtdb.europe-west1.firebasedatabase.app/")
         val numero = intent.getStringExtra("numero")
         val prefisso = intent.getStringExtra("prefisso")
+        val password = intent.getStringExtra("password")
         if (salvati.getString("io", null) == null && FirebaseAuth.getInstance().currentUser?.uid != null) {
             val id = FirebaseAuth.getInstance().currentUser?.uid.toString()
             dbHelper.inserisci(db," ",id,numero.toString())
             salvati.edit().putString("io", numero).apply()
             runBlocking() {
-                server.reg_id(prefisso.toString(),numero.toString(),id)
-            database_ref.child("chats").child(FirebaseAuth.getInstance().currentUser!!.uid).addListenerForSingleValueEvent(object : ValueEventListener{
-                override fun onDataChange(snapshot: DataSnapshot) {
-                    for (nuovo_ID in snapshot.children) {
-                        println(nuovo_ID)
-                        if (nuovo_ID.key != "foto" && nuovo_ID.key != FirebaseAuth.getInstance().currentUser!!.uid) {
-                            var risultato = server.cerca_id(nuovo_ID.key!!)
-                            salvati.edit().putString(risultato, nuovo_ID.key!!).apply()
-                        }
-                    }
-                }
+                var risultato = server.reg_id(
+                    prefisso.toString(),
+                    numero.toString(),
+                    id,
+                    password!!,
+                    this@MainActivity
+                )
+                if (risultato.trim() == "Successo") {
+                    database_ref.child("chats").child(FirebaseAuth.getInstance().currentUser!!.uid)
+                        .addListenerForSingleValueEvent(object : ValueEventListener {
+                            override fun onDataChange(snapshot: DataSnapshot) {
+                                for (nuovo_ID in snapshot.children) {
+                                    if (nuovo_ID.key != "foto" && nuovo_ID.key != FirebaseAuth.getInstance().currentUser!!.uid) {
+                                        var risultato = server.cerca_id(nuovo_ID.key!!)
+                                        salvati.edit().putString(risultato, nuovo_ID.key!!).apply()
+                                    }
+                                }
+                            }
 
-                override fun onCancelled(error: DatabaseError) {
-                    TODO("Not yet implemented")
-                }
+                            override fun onCancelled(error: DatabaseError) {
+                                TODO("Not yet implemented")
+                            }
 
-            })
+                        })
+                } else {
+                    Toast.makeText(this@MainActivity, "Si è verificato un errore", Toast.LENGTH_LONG).show()
+                    val myIntent = Intent(this@MainActivity, LoginActivity::class.java)
+                    startActivity(myIntent)
+                }
             }
         }
         Impostazioni()
@@ -138,7 +151,6 @@ class MainActivity : AppCompatActivity(),NavigationView.OnNavigationItemSelected
 
         Cerca.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
             override fun onQueryTextSubmit(query: String?): Boolean {
-                salvati.edit().clear().commit()
                 if(query!!.length == 10 && "^\\d+\$".toRegex().matches(query)){
                 firebaseid = salvati.getString("$query","").toString()
                 if (firebaseid.isNullOrEmpty()) {
@@ -192,9 +204,9 @@ class MainActivity : AppCompatActivity(),NavigationView.OnNavigationItemSelected
         drawerLayout = findViewById<DrawerLayout>(R.id.drawerlayout);
         supportActionBar!!.hide()
         val toolbar: androidx.appcompat.widget.Toolbar  = this.findViewById(R.id.toolbar)
-        val toglle = ActionBarDrawerToggle(this,drawerLayout,toolbar ,R.string.app_name,R.string.app_name)
-        drawerLayout.addDrawerListener(toglle)
-        toglle.syncState()
+        val pulsante_att = ActionBarDrawerToggle(this,drawerLayout,toolbar ,R.string.app_name,R.string.app_name)
+        drawerLayout.addDrawerListener(pulsante_att)
+        pulsante_att.syncState()
         impostazioni.setNavigationItemSelectedListener(this)
         supportActionBar!!.setDisplayHomeAsUpEnabled(true)
         immagine_numero_profilo(impostazioni)
@@ -246,7 +258,6 @@ class MainActivity : AppCompatActivity(),NavigationView.OnNavigationItemSelected
                     database_ref.child("chats").child(id).child("foto")
                         .addValueEventListener(object : ValueEventListener {
                             override fun onDataChange(snapshot: DataSnapshot) {
-                                println("valore : ${snapshot.value}")
                                 dbHelper.inseriscifoto(db, snapshot.value.toString(), id)
                             }
 
@@ -255,9 +266,8 @@ class MainActivity : AppCompatActivity(),NavigationView.OnNavigationItemSelected
                             }
 
                         })
-                    print("foto: $foto")
                     val uno =
-                        Persone(persona.key, persona.value as String, "dbHelper.prendifoto(db,id)")
+                        Persone(persona.key, persona.value as String, dbHelper.prendifoto(db,id))
                     listapersone.add(uno)
                 }
             }

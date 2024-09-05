@@ -106,7 +106,7 @@ class Verifica : AppCompatActivity() {
         }
 
         override fun onVerificationFailed(e: FirebaseException) { //chiamato in caso la richiesta per la verifica non è valida
-            Toast.makeText(this@Verifica, "Si è verificato un problema, riprovare in seguito", Toast.LENGTH_LONG).show() // quota degli sms raggiunta
+            Toast.makeText(this@Verifica, "Si è verificato un problema, riprovare in seguito", Toast.LENGTH_LONG).show()
 
         }
 

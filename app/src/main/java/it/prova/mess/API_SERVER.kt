@@ -37,26 +37,13 @@ class API_SERVER {
         val risposta = connessione.Prendi()
         return risposta
     }
-    fun login(prefisso: String, numero: String, password: String, activity: Activity): String{
+    fun login(prefisso: String, numero: String, password: String): String{
         val cifratura= cifra("$prefisso $numero $password")
         val risposta_cifrata = thread("/login", cifratura.cifrato!!, cifratura.ChiaveCifrata)
         if (risposta_cifrata.startsWith("Errore")) {
             return risposta_cifrata
         } else {
             val risposta = decifraAES(risposta_cifrata, cifratura.chiave)
-            try {
-                val chiave_API = risposta.removePrefix("Successo API: ")
-                val sharedPreferences = activity.getSharedPreferences("API_KEY", Context.MODE_PRIVATE)
-                println("chiave: $chiave_API")
-                with(sharedPreferences.edit()){
-                    putString("API_KEY", cifraRSA(chiave_API))
-                    apply()
-                    println("salvato")
-                }
-                return "Successo"
-            } catch (e: Exception){
-                println("login non riuscito")
-            }
             return risposta
         }
     }
@@ -94,14 +81,22 @@ class API_SERVER {
         }
     }
 
-    fun reg_id(prefisso: String, numero: String, id : String) : String{
-        val cifratura = cifra("$prefisso $numero $id")
+    fun reg_id(prefisso: String, numero: String, id : String, password: String, activity: Activity) : String{
+        val cifratura = cifra("$prefisso $numero $id $password")
         val risposta_cifrata = thread("/reg_id", cifratura.cifrato!!, cifratura.ChiaveCifrata)
         if (risposta_cifrata.startsWith("Errore")) {
             return risposta_cifrata
         } else {
             val risposta = decifraAES(risposta_cifrata, cifratura.chiave)
-            return risposta
+            val chiave_API = risposta.removePrefix("Successo API: ")
+            val sharedPreferences = activity.getSharedPreferences("API_KEY", Context.MODE_PRIVATE)
+            println("chiave: $chiave_API")
+            with(sharedPreferences.edit()){
+                putString("API_KEY", cifraRSA(chiave_API))
+                apply()
+                println("salvato")
+            }
+            return risposta.removeSuffix(chiave_API)
         }
     }
 
