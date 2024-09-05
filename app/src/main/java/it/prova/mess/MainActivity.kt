@@ -139,6 +139,7 @@ class MainActivity : AppCompatActivity(),NavigationView.OnNavigationItemSelected
         Cerca.setOnQueryTextListener(object : SearchView.OnQueryTextListener {
             override fun onQueryTextSubmit(query: String?): Boolean {
                 salvati.edit().clear().commit()
+                if(query!!.length == 10 && "^\\d+\$".toRegex().matches(query)){
                 firebaseid = salvati.getString("$query","").toString()
                 if (firebaseid.isNullOrEmpty()) {
                     firebaseid = server.cerca_numero(Cerca.query.toString())
@@ -147,16 +148,21 @@ class MainActivity : AppCompatActivity(),NavigationView.OnNavigationItemSelected
                             putString("$query", firebaseid)
                             apply()
                         }
-                        println(firebaseid)
                         val intent = Intent(this@MainActivity, MainActivity3::class.java)
                         intent.putExtra("firebase-id", firebaseid)
-                        intent.putExtra("numero",query)
+                        intent.putExtra("numero", query)
                         startActivity(intent)
                         this@MainActivity.finish()
-                    } else{
-                            Toast.makeText(this@MainActivity, "Si è verificato un errore", Toast.LENGTH_LONG).show()
-                        }
-
+                    } else {
+                        Toast.makeText(
+                            this@MainActivity,
+                            "Si è verificato un errore",
+                            Toast.LENGTH_LONG
+                        ).show()
+                    }
+                }
+                } else{
+                    Toast.makeText(this@MainActivity, "Inserisci un numero valido", Toast.LENGTH_SHORT).show()
                 }
 
                 return true

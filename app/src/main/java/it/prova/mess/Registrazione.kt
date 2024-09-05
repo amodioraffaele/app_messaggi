@@ -42,7 +42,7 @@ class Registrazione : AppCompatActivity() {
             val numero = numeroView.text.toString()
             var password = passwordView.text.toString()
             val prefissoScelto = PrefissoView.selectedItem
-            if (numero.length == 10) {
+            if (numero.length == 10 && "^\\d+\$".toRegex().matches(numero)) {
                 if (password == RipetiView.text.toString()) {
                     if ((password.contains("[A-Za-z0-9!\"#$%&'()*+,-./:;\\\\<=>?@\\[\\]^_`{|}~]".toRegex())) && password.length > 10) {
                         password = password.hash(salt)
