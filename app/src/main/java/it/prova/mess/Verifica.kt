@@ -1,11 +1,9 @@
 package it.prova.mess
 
 import android.annotation.SuppressLint
-import android.content.ContentValues.TAG
 import android.content.Intent
 import android.os.Bundle
 import android.os.CountDownTimer
-import android.util.Log
 import android.view.View
 import android.widget.Button
 import android.widget.EditText
@@ -13,7 +11,6 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.google.firebase.FirebaseException
-import com.google.firebase.FirebaseTooManyRequestsException
 import com.google.firebase.auth.*
 import com.google.firebase.auth.PhoneAuthProvider.ForceResendingToken
 import java.util.concurrent.TimeUnit
@@ -23,7 +20,7 @@ class Verifica : AppCompatActivity() {
     private var auth = FirebaseAuth.getInstance()
     private val Stringa = "È stato inviato un OTP al tuo numero "
     private var storedVerificationId : String? = ""
-    private lateinit var Token : PhoneAuthProvider.ForceResendingToken
+    private lateinit var Token : ForceResendingToken
     private var tentativi = 0
     private var timer = 60
     private lateinit var numero: String
@@ -51,17 +48,17 @@ class Verifica : AppCompatActivity() {
         rimanda.setOnClickListener(){
             if (timer == 0){
                 countdown()
-                resendVerificationCode(numero.toString(), Token)
+                re_invia_codice(numero, Token)
             }
         }
         invia.setOnClickListener(){
             val ViewOTP = findViewById<EditText>(R.id.OTP)
             val OTP = ViewOTP.text.toString()
             if (storedVerificationId == null && savedInstanceState != null) {
-                onRestoreInstanceState(savedInstanceState);
+                onRestoreInstanceState(savedInstanceState)
             }
             val credential = PhoneAuthProvider.getCredential(storedVerificationId.toString(), OTP)
-            signInWithPhoneAuthCredential(credential)
+            login(credential)
 
         }
 
@@ -84,7 +81,7 @@ class Verifica : AppCompatActivity() {
         countdown.start()
     }
 
-    private fun signInWithPhoneAuthCredential(credential: PhoneAuthCredential) {
+    private fun login(credential: PhoneAuthCredential) {
         auth.signInWithCredential(credential)
             .addOnCompleteListener(this) { task ->
                 if (task.isSuccessful) {
@@ -105,7 +102,7 @@ class Verifica : AppCompatActivity() {
     val callbacks = object : PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
 
         override fun onVerificationCompleted(credential: PhoneAuthCredential) { //viene chiamato quando l'app prende l'otp da sola
-            signInWithPhoneAuthCredential(credential)
+            login(credential)
         }
 
         override fun onVerificationFailed(e: FirebaseException) { //chiamato in caso la richiesta per la verifica non è valida
@@ -115,7 +112,7 @@ class Verifica : AppCompatActivity() {
 
         override fun onCodeSent(
             verificationId: String,
-            token: PhoneAuthProvider.ForceResendingToken,
+            token: ForceResendingToken
         ) {
             storedVerificationId =  verificationId
             Token = token
@@ -130,13 +127,13 @@ class Verifica : AppCompatActivity() {
         super.onSaveInstanceState(outState)
         outState.putString("KEY_VERIFICATION_ID", storedVerificationId)
     }
-    private fun resendVerificationCode(phoneNumber: String, token: ForceResendingToken, ) {
+    private fun re_invia_codice(numero: String, token: ForceResendingToken, ) {
         PhoneAuthProvider.getInstance().verifyPhoneNumber(
-            phoneNumber,  // Phone number to verify
-            60,  // Timeout duration
-            TimeUnit.SECONDS,  // Unit of timeout
-            this@Verifica,  // Activity (for callback binding)
-            callbacks,  // OnVerificationStateChangedCallbacks
+            numero,
+            60,
+            TimeUnit.SECONDS,
+            this@Verifica,
+            callbacks,
             token
         )
     }
