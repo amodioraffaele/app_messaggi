@@ -39,13 +39,14 @@ class LoginActivity : AppCompatActivity() {
         val server = API_SERVER()
         accedi.setOnClickListener() {
             val numero = numeroView.text.toString()
-            val password = passwordView.text.toString()
-            passwordView.setText("")
-            var prefisso = PrefissoView.selectedItem.toString()
-            val risultato = server.login(prefisso, numero, password, this@LoginActivity)
+            if (numero.length == 10 && "^\\d+\$".toRegex().matches(numero)) {
+                val password = passwordView.text.toString()
+                passwordView.setText("")
+                var prefisso = PrefissoView.selectedItem.toString()
+                val risultato = server.login(prefisso, numero, password)
 
-            Controllo(prefisso,numero, risultato)
-
+                Controllo(prefisso, numero, risultato)
+            }
         }
         Reg.setOnClickListener() {
             val intent = Intent(this, Registrazione::class.java)
