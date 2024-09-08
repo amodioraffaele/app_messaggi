@@ -18,22 +18,9 @@ import com.google.firebase.Firebase
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.*
 import com.google.gson.Gson
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
-import net.zetetic.database.sqlcipher.SQLiteConnection
-import net.zetetic.database.sqlcipher.SQLiteDatabaseHook
-import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
-import java.io.BufferedReader
-import java.io.InputStreamReader
-import java.io.PrintWriter
 import java.lang.reflect.Type
-import java.net.Socket
 import java.util.*
-import java.util.regex.Pattern
-import javax.net.ssl.SSLContext
-import javax.net.ssl.TrustManagerFactory
 import kotlin.collections.ArrayList
 
 
@@ -84,24 +71,24 @@ class MainActivity3 : AppCompatActivity() {
         }
         val database = Firebase.database
         val myRef = database.getReferenceFromUrl("https://messaggi-f4a2d-default-rtdb.europe-west1.firebasedatabase.app/")
-        Chiave(id, id_ricevente!!)
+        Chiave(id, id_ricevente)
 
 
-        dbHelper = database(this, PasswordDatabase(this))
+        dbHelper = database(this)
         db = dbHelper.writableDatabase
         chat.layoutManager = LinearLayoutManager(this)
         chat.adapter = messaggioView
-        for (singolo in riprendichat(id_ricevente.toString(),db)) {
+        for (singolo in riprendichat(id_ricevente,db)) {
             messaggi.add(singolo)
         }
         messaggioView.notifyDataSetChanged()
         val indietro = findViewById<ImageView>(R.id.indietro)
         indietro.setOnClickListener(){
             val intent = Intent(this, MainActivity::class.java)
-            salvachat(messaggi, id_ricevente.toString(), db)
+            salvachat(messaggi, id_ricevente, db)
             startActivity(intent)
         }
-        myRef.child("chats").child(id).child(id_ricevente.toString()).child("messaggi").addValueEventListener(object : ValueEventListener{
+        myRef.child("chats").child(id).child(id_ricevente).child("messaggi").addValueEventListener(object : ValueEventListener{
             override fun onDataChange(dataSnapshot: DataSnapshot) {
                     for (nuovo in dataSnapshot.children){
                         val mess = nuovo.getValue(Messaggio::class.java)
@@ -124,15 +111,15 @@ class MainActivity3 : AppCompatActivity() {
             val messaggio = Messaggio(testo_t.text.toString(), id)
             testo_t.text = ""
             if (messaggio.messaggio!!.trim().isNotEmpty()) {
-                messaggio.messaggio = cifraMessaggioAES(messaggio.messaggio!!, Chiave(id,id_ricevente.toString())).toString()
+                messaggio.messaggio = cifraMessaggioAES(messaggio.messaggio!!, Chiave(id,id_ricevente))
                 if (id != id_ricevente) {
-                    myRef.child("chats").child(id).child(id_ricevente.toString()).child("messaggi").push()
+                    myRef.child("chats").child(id).child(id_ricevente).child("messaggi").push()
                         .setValue(messaggio).onSuccessTask {
-                        myRef.child("chats").child(id_ricevente.toString()).child(id).child("messaggi").push()
+                        myRef.child("chats").child(id_ricevente).child(id).child("messaggi").push()
                             .setValue(messaggio)
                     }
                 } else {
-                    myRef.child("chats").child(id).child(id_ricevente.toString()).child("messaggi").push()
+                    myRef.child("chats").child(id).child(id_ricevente).child("messaggi").push()
                         .setValue(messaggio)
                 }
             }
@@ -144,8 +131,8 @@ class MainActivity3 : AppCompatActivity() {
         if (this::chiave.isInitialized) {
             return chiave
         } else{
-            val sharedpref = this.getPreferences(Context.MODE_PRIVATE)
-            var chiavePref = sharedpref.getString("$id$id_ricevente", null)
+            val sharedpref = this.getSharedPreferences("chat_chiave", Context.MODE_PRIVATE)
+            val chiavePref = sharedpref.getString("$id$id_ricevente", null)
             if (chiavePref == null) {
                 runBlocking {
                     chiave = API_SERVER().chiave(id, id_ricevente, this@MainActivity3)

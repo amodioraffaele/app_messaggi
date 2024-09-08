@@ -10,7 +10,6 @@ import android.os.Build
 import android.os.Bundle
 import android.view.Gravity
 import android.view.MenuItem
-import android.widget.Button
 import android.widget.ImageView
 import android.widget.SearchView
 import android.widget.TextView
@@ -28,20 +27,15 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.auth
 import com.google.firebase.database.*
 import com.google.firebase.storage.FirebaseStorage
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withContext
 import java.io.*
-import javax.net.ssl.SSLContext
-import javax.net.ssl.TrustManagerFactory
-import it.prova.mess.R
+
 
 class Persone{
     var nome : String? = null
      var id : String? = null
     var foto : String? = null
-    constructor(){}
+
     constructor(NOME: String, ID: String, Foto: String){
         this.nome = NOME
         this.id = ID
@@ -62,13 +56,13 @@ class MainActivity : AppCompatActivity(),NavigationView.OnNavigationItemSelected
         val server = API_SERVER()
         setContentView(R.layout.activity_main)
         runBlocking {
-            var auth = FirebaseAuth.getInstance()
+            val auth = FirebaseAuth.getInstance()
             if (auth.currentUser == null) {
                 val myIntent = Intent(this@MainActivity, LoginActivity::class.java)
                 startActivity(myIntent)
             }
         }
-        dbHelper = database(this, PasswordDatabase(this))
+        dbHelper = database(this)
         db = dbHelper.writableDatabase
         salvati = this.getPreferences(Context.MODE_PRIVATE)
         val database = Firebase.database
@@ -81,7 +75,7 @@ class MainActivity : AppCompatActivity(),NavigationView.OnNavigationItemSelected
             dbHelper.inserisci(db," ",id,numero.toString())
             salvati.edit().putString("io", numero).apply()
             runBlocking() {
-                var risultato = server.reg_id(
+                val risultato = server.reg_id(
                     prefisso.toString(),
                     numero.toString(),
                     id,
@@ -94,7 +88,7 @@ class MainActivity : AppCompatActivity(),NavigationView.OnNavigationItemSelected
                             override fun onDataChange(snapshot: DataSnapshot) {
                                 for (nuovo_ID in snapshot.children) {
                                     if (nuovo_ID.key != "foto" && nuovo_ID.key != FirebaseAuth.getInstance().currentUser!!.uid) {
-                                        var risultato = server.cerca_id(nuovo_ID.key!!)
+                                        val risultato = server.cerca_id(nuovo_ID.key!!)
                                         salvati.edit().putString(risultato, nuovo_ID.key!!).apply()
                                     }
                                 }
@@ -106,6 +100,7 @@ class MainActivity : AppCompatActivity(),NavigationView.OnNavigationItemSelected
 
                         })
                 } else {
+                    salvati.edit().clear().apply()
                     Toast.makeText(this@MainActivity, "Si è verificato un errore", Toast.LENGTH_LONG).show()
                     val myIntent = Intent(this@MainActivity, LoginActivity::class.java)
                     startActivity(myIntent)
@@ -134,8 +129,8 @@ class MainActivity : AppCompatActivity(),NavigationView.OnNavigationItemSelected
             override fun onDataChange(snapshot: DataSnapshot) {
                 for (nuovo_ID in snapshot.children) {
                     if (nuovo_ID.key != "foto" && nuovo_ID.key != FirebaseAuth.getInstance().currentUser!!.uid) {
-                        var risultato = server.cerca_id(nuovo_ID.key!!)
-                        salvati.edit().putString(risultato, nuovo_ID.key!!)
+                        val risultato = server.cerca_id(nuovo_ID.key!!)
+                        salvati.edit().putString(risultato, nuovo_ID.key!!).apply()
                     }
                 }
             }
@@ -201,7 +196,7 @@ class MainActivity : AppCompatActivity(),NavigationView.OnNavigationItemSelected
 
     private fun Impostazioni() {
         val impostazioni = findViewById<NavigationView>(R.id.impostazioni)
-        drawerLayout = findViewById<DrawerLayout>(R.id.drawerlayout);
+        drawerLayout = findViewById<DrawerLayout>(R.id.drawerlayout)
         supportActionBar!!.hide()
         val toolbar: androidx.appcompat.widget.Toolbar  = this.findViewById(R.id.toolbar)
         val pulsante_att = ActionBarDrawerToggle(this,drawerLayout,toolbar ,R.string.app_name,R.string.app_name)
@@ -248,7 +243,6 @@ class MainActivity : AppCompatActivity(),NavigationView.OnNavigationItemSelected
         val tutti = salvati.all
         for (persona in tutti) {
             if (FirebaseAuth.getInstance().currentUser?.uid != null) {
-                    var foto: String? = null
                     var id = " "
                     if (persona.key == "io") {
                         id = FirebaseAuth.getInstance().currentUser?.uid ?: ""
@@ -284,8 +278,13 @@ class MainActivity : AppCompatActivity(),NavigationView.OnNavigationItemSelected
                 val intent = Intent(this,LoginActivity::class.java)
                 salvati.edit().clear().commit()
                 dbHelper.cancella(db)
-                startActivity(intent)
+                val sharedpref = this.getSharedPreferences("chat_chiave", Context.MODE_PRIVATE)
+                sharedpref.edit().clear().commit()
+                val chiave = this.getSharedPreferences("API_KEY", Context.MODE_PRIVATE)
+                CancellaChiaveRSA()
+                chiave.edit().clear().commit()
                 this.deleteDatabase("database")
+                startActivity(intent)
             }
             R.id.indietro ->{
                 drawerLayout.closeDrawer(GravityCompat.START)

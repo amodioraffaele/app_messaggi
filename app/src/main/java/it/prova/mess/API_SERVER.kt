@@ -4,16 +4,12 @@ import android.app.Activity
 import android.content.Context
 import android.os.Build
 import androidx.annotation.RequiresApi
-import androidx.security.crypto.MasterKeys
 import com.google.gson.JsonObject
-import com.squareup.moshi.Json
-import kotlinx.coroutines.runBlocking
 import okhttp3.*
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.RequestBody.Companion.toRequestBody
-import java.io.IOException
 import java.util.*
-import kotlin.concurrent.thread
+
 
 data class Cifratura(
     var cifrato : String,
@@ -39,7 +35,7 @@ class API_SERVER {
     }
     fun login(prefisso: String, numero: String, password: String): String{
         val cifratura= cifra("$prefisso $numero $password")
-        val risposta_cifrata = thread("/login", cifratura.cifrato!!, cifratura.ChiaveCifrata)
+        val risposta_cifrata = thread("/login", cifratura.cifrato, cifratura.ChiaveCifrata)
         if (risposta_cifrata.startsWith("Errore")) {
             return risposta_cifrata
         } else {
@@ -50,7 +46,7 @@ class API_SERVER {
 
     fun registrazione(prefisso: String, numero: String, password: String): String {
         val cifratura = cifra("$prefisso $numero $password")
-        val risposta_cifrata = thread("/registrazione", cifratura.cifrato!!, cifratura.ChiaveCifrata)
+        val risposta_cifrata = thread("/registrazione", cifratura.cifrato, cifratura.ChiaveCifrata)
         if (risposta_cifrata.startsWith("Errore") || risposta_cifrata.isNullOrEmpty()) {
             return risposta_cifrata
         } else {
@@ -61,7 +57,7 @@ class API_SERVER {
 
     fun cerca_numero(numero: String): String{
         val cifratura = cifra("$numero")
-        val risposta_cifrata = thread( "/cerca_numero", cifratura.cifrato!!, cifratura.ChiaveCifrata)
+        val risposta_cifrata = thread( "/cerca_numero", cifratura.cifrato, cifratura.ChiaveCifrata)
         if (risposta_cifrata.startsWith("Errore")) {
             return risposta_cifrata
         } else {
@@ -72,7 +68,7 @@ class API_SERVER {
 
     fun cerca_id(id: String): String{
         val cifratura = cifra("$id")
-        val risposta_cifrata = thread("/cerca_id", cifratura.cifrato!!, cifratura.ChiaveCifrata)
+        val risposta_cifrata = thread("/cerca_id", cifratura.cifrato, cifratura.ChiaveCifrata)
         if (risposta_cifrata.startsWith("Errore")) {
             return risposta_cifrata
         } else {
@@ -83,18 +79,16 @@ class API_SERVER {
 
     fun reg_id(prefisso: String, numero: String, id : String, password: String, activity: Activity) : String{
         val cifratura = cifra("$prefisso $numero $id $password")
-        val risposta_cifrata = thread("/reg_id", cifratura.cifrato!!, cifratura.ChiaveCifrata)
+        val risposta_cifrata = thread("/reg_id", cifratura.cifrato, cifratura.ChiaveCifrata)
         if (risposta_cifrata.startsWith("Errore")) {
             return risposta_cifrata
         } else {
             val risposta = decifraAES(risposta_cifrata, cifratura.chiave)
             val chiave_API = risposta.removePrefix("Successo API: ")
             val sharedPreferences = activity.getSharedPreferences("API_KEY", Context.MODE_PRIVATE)
-            println("chiave: $chiave_API")
             with(sharedPreferences.edit()){
                 putString("API_KEY", cifraRSA(chiave_API))
                 apply()
-                println("salvato")
             }
             return risposta.removeSuffix(chiave_API)
         }
@@ -105,7 +99,7 @@ class API_SERVER {
         val chiave = sharedPreferences.getString("API_KEY", null)
         val chiave_dec = decifraRSA(chiave!!)
         val cifratura = cifra("$id1 $id2 $chiave_dec")
-        val risposta_cifrata = thread("/chiave", cifratura.cifrato!!, cifratura.ChiaveCifrata)
+        val risposta_cifrata = thread("/chiave", cifratura.cifrato, cifratura.ChiaveCifrata)
         if (risposta_cifrata.startsWith("Errore")) {
             return risposta_cifrata
         } else {
@@ -115,7 +109,7 @@ class API_SERVER {
     }
 
 
-    class Connessione : Runnable {
+    private class Connessione : Runnable {
         @Volatile
         private var url = "https://299d-79-49-10-180.ngrok-free.app"
         var risposta = "errore"
@@ -147,7 +141,7 @@ class API_SERVER {
             }
         }
 
-        public fun Prendi(): String {
+        fun Prendi(): String {
             return this.risposta
         }
 

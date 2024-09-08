@@ -4,7 +4,7 @@ import android.content.Context
 import android.database.sqlite.SQLiteDatabase
 import android.database.sqlite.SQLiteOpenHelper
 
-class database(context: Context, val chiave : String): SQLiteOpenHelper(context, "database", null,1) {
+class database(context: Context): SQLiteOpenHelper(context, "database", null,1) {
 
     override fun onCreate(db: SQLiteDatabase?) {
         db!!.execSQL("CREATE TABLE chat (ID_INTERLOCUTORE TEXT PRIMARY KEY, MESSAGGI TEXT, NUMERO TEXT, FOTO TEXT)")
@@ -52,14 +52,6 @@ class database(context: Context, val chiave : String): SQLiteOpenHelper(context,
     fun cancella(db: SQLiteDatabase?){
         val cursore = db!!.rawQuery("DROP TABLE chat", null)
         cursore.use {  }
-    }
-    fun tutti(db: SQLiteDatabase?): ArrayList<String> {
-        val cursore = db!!.rawQuery("SELECT ID_INTERLOCUTORE, NUMERO FROM chat",null)
-        var risposta : ArrayList<String> = ArrayList()
-        cursore.use {
-            risposta.add(it.getString(it.getColumnIndexOrThrow("NUMERO")))
-        }
-        return risposta
     }
 
 }
